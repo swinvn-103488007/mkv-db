@@ -46,7 +46,7 @@ func handleConnection(conn net.Conn, counter *counter.Counter) {
 		}
 		counter.Increment()
 		// Print the raw bytes received
-		fmt.Printf("Received %d bytes from %s: %v\n. Request count: %v", numBytes, conn.RemoteAddr(), buffer[:numBytes], counter.Value())
+		fmt.Printf("Received %d bytes from %s: %v.\nRequest count: %v\n", numBytes, conn.RemoteAddr(), buffer[:numBytes], counter.Value())
 		// Also print as string for readability (if printable)
 		fmt.Printf("As string: %q\n", buffer[:numBytes])
 	}
