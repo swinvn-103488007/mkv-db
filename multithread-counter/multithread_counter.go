@@ -1,7 +1,7 @@
-package main
+package counter
 
 import (
-	"fmt"
+	// "fmt"
 	"sync"
 )
 
@@ -30,22 +30,22 @@ func (c *Counter) Value() int {
 	return c.value
 }
 
-func main() {
-	// Example usage
-	c := NewCounter()
-	var wg sync.WaitGroup
-	numRoutines := 1000;
-	numIncrements := 100;
-	for routine := 0; routine < numRoutines; routine++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < numIncrements; i++ {
-				c.Increment()
-			}
-		}()
-	}
+// func main() {
+// 	// Example usage
+// 	c := NewCounter()
+// 	var wg sync.WaitGroup
+// 	numRoutines := 1000;
+// 	numIncrements := 100;
+// 	for routine := 0; routine < numRoutines; routine++ {
+// 		wg.Add(1)
+// 		go func() {
+// 			defer wg.Done()
+// 			for i := 0; i < numIncrements; i++ {
+// 				c.Increment()
+// 			}
+// 		}()
+// 	}
 
-	wg.Wait()
-	fmt.Println("Final counter value:", c.Value())
-}
+// 	wg.Wait()
+// 	fmt.Println("Final counter value:", c.Value())
+// }
