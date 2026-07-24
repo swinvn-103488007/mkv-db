@@ -27,7 +27,7 @@ func main() {
 		}
 
 		fmt.Printf("New connection from %s\n", conn.RemoteAddr())
-		handleConnection(conn, counter)
+		go handleConnection(conn, counter)
 	}
 }
 
