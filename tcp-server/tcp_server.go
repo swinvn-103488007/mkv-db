@@ -8,6 +8,8 @@ import (
 	"trildd/mkv-db/config"
 )
 
+const ACCEPT_MSG = "accept_message"
+
 func main() {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", config.TCP_PORT))
 	if err != nil {
@@ -23,8 +25,8 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error accepting connection: %v\n", err)
 			continue
 		}
-		fmt.Println("Waiting to connect with server...")
 		semaphore <- true
+		conn.Write([]byte(fmt.Sprintf("%v\n", ACCEPT_MSG)))
 		fmt.Printf("New connection from %s\n", conn.RemoteAddr())
 		go handleConnection(conn, semaphore)
 	}
