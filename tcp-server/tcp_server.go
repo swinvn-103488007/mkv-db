@@ -5,33 +5,32 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"trildd/mkv-db/multithread-counter"
+	"trildd/mkv-db/config"
 )
 
-var tcp_port = ":1606"
-
 func main() {
-	counter := counter.NewCounter()
-	listener, err := net.Listen("tcp", tcp_port)
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", config.TCP_PORT))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listening on port %v, %v\n", tcp_port, err)
+		fmt.Fprintf(os.Stderr, "Error listening on port %v, %v\n", config.TCP_PORT, err)
 		os.Exit(1)
 	}
 	defer listener.Close()
-	fmt.Printf("Start listening on %v\n", tcp_port)
+	fmt.Printf("Start listening on %v\n", config.TCP_PORT)
+	semaphore := make(chan bool, config.MAX_CLIENT)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error accepting connection: %v\n", err)
 			continue
 		}
-
+		fmt.Println("Waiting to connect with server...")
+		semaphore <- true
 		fmt.Printf("New connection from %s\n", conn.RemoteAddr())
-		go handleConnection(conn, counter)
+		go handleConnection(conn, semaphore)
 	}
 }
 
-func handleConnection(conn net.Conn, counter *counter.Counter) {
+func handleConnection(conn net.Conn, semaphore chan bool) {
 	defer conn.Close()
 	buffer := make([]byte, 1024)
 	for {
@@ -41,12 +40,12 @@ func handleConnection(conn net.Conn, counter *counter.Counter) {
 				fmt.Fprintf(os.Stderr, "Error reading from %s: %v\n", conn.RemoteAddr(), err)
 			} else {
 				fmt.Printf("Connection closed by %s\n", conn.RemoteAddr())
+				<-semaphore
 			}
 			return
 		}
-		counter.Increment()
 		// Print the raw bytes received
-		fmt.Printf("Received %d bytes from %s: %v.\nRequest count: %v\n", numBytes, conn.RemoteAddr(), buffer[:numBytes], counter.Value())
+		fmt.Printf("Received %d bytes from %s: %v.\n", numBytes, conn.RemoteAddr(), buffer[:numBytes])
 		// Also print as string for readability (if printable)
 		fmt.Printf("As string: %q\n", buffer[:numBytes])
 	}
