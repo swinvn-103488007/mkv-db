@@ -5,14 +5,18 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"net"
 	"os"
+	"syscall"
 	"strings"
 	"time"
 )
 
-const ACCEPT_MSG = "accept_message"
+const (
+	TCIFLUSH = 0
+	TCFLSH   = 0x540B // Linux; on macOS/BSD use syscall.TIOCFLUSH instead
+	ACCEPT_MSG = "accept_message"
+)
 
 func main() {
 	conn, err := net.Dial("tcp", "127.0.0.1:1606")
@@ -25,7 +29,7 @@ func main() {
 	fmt.Println("Connected to 127.0.0.1:1606")
 	fmt.Println("Wait until server is ready to take message...")
 	waitReadyMsg(conn)
-	clearStdin()
+	DrainStdin()
 	talkingToServer(conn)
 }
 
@@ -53,28 +57,40 @@ func waitReadyMsg(conn net.Conn) {
 }
 
 // helper to clear any buffered data caused by user during wait time
-func clearStdin() {
-	fmt.Println("Clearing coincident buffer")
-	done := make(chan struct{})
-	go func() {
-		buf := make([]byte, 4096)
-		for {
-			n, err := os.Stdin.Read(buf)
-			if n == 0 || err == io.EOF {
-				break
-			}
-			// just discard the data
-		}
-		close(done)
-	}()
+// NOTE: this helper cannot truly clear/drain the Stdin buffer
+// func clearStdin() {
+// 	fmt.Println("Clearing coincident buffer")
+// 	done := make(chan struct{})
+// 	go func() {
+// 		buf := make([]byte, 4096)
+// 		for {
+// 			n, _ := os.Stdin.Read(buf)
+// 			fmt.Printf("Read buffer as string: %q\n", buf[:n])
+// 			if n == 0 {
+// 				fmt.Println("End of old buffered data")
+// 				break
+// 			}
+// 		}
+// 		close(done)
+// 	}()
 
-	select {
-	case <-done:
-		// successfully drained
-	case <-time.After(150 * time.Millisecond):
-	// 	// timeout – we assume the buffer is clear enough
+// 	<-done
+// 	fmt.Println("Done clear coincident buffer")
+// }
+
+// DrainStdin discards any unread input currently buffered by the terminal.
+func DrainStdin() error {
+	fd := os.Stdin.Fd()
+	_, _, errno := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		uintptr(fd),
+		uintptr(TCFLSH),
+		uintptr(TCIFLUSH),
+	)
+	if errno != 0 {
+		return errno
 	}
-	fmt.Println("Done clear coincident buffer")
+	return nil
 }
 
 func talkingToServer(conn net.Conn) {
